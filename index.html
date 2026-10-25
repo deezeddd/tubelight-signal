@@ -70,6 +70,18 @@ input:focus { outline: 2px solid var(--ink); outline-offset: 2px; }
 .mood[data-mood="urgent"] { --c: var(--urgent); }
 .mood[data-mood="call"]   { --c: var(--call); }
 .mood:disabled { opacity: .5; cursor: default; }
+.pick { padding: 18px 18px 48px; cursor: ew-resize; touch-action: none; user-select: none; -webkit-user-select: none; }
+.pick::before { opacity: 1; }
+.pick .hint { position: absolute; right: 16px; bottom: 14px; font-family: var(--display); font-weight: 500; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: rgba(246,241,232,.5); }
+.set {
+  width: 100%; margin-top: 12px; padding: 14px 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--hairline); background: var(--card); color: var(--ink);
+  font-family: var(--display); font-weight: 800; font-size: 18px; letter-spacing: .04em; text-transform: uppercase;
+}
+.set:active { transform: scale(.985); }
+.set:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.set:disabled { opacity: .5; cursor: default; }
+.set b { color: var(--pc, var(--ink)); font-weight: 800; }
 .status { font-family: var(--display); font-weight: 500; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); min-height: 22px; }
 .status.ok { color: var(--ok); }
 .status.err { color: var(--urgent); }
@@ -98,6 +110,13 @@ input:focus { outline: 2px solid var(--ink); outline-offset: 2px; }
       <button class="mood" data-mood="urgent" type="button"><span class="name">Urgent</span><span class="chip">six fast red flashes</span></button>
       <button class="mood" data-mood="call" type="button"><span class="name">Call me</span><span class="chip">four purple pulses</span></button>
     </div>
+    <label style="margin-top:24px; display:block">Or set his light to a colour</label>
+    <div class="mood pick" id="pick" role="slider" aria-label="Colour" aria-valuemin="0" aria-valuemax="359" aria-valuenow="240" tabindex="0" style="--c:#0000ff; margin-top:6px">
+      <span class="name" id="pickName">Blue</span>
+      <span class="chip" id="pickHex">#0000FF</span>
+      <span class="hint">Drag across for colour</span>
+    </div>
+    <button class="set" id="setBtn" type="button">Set his light to <b id="setName">Blue</b></button>
     <label style="margin-top:20px">Note, optional
       <input id="note" type="text" maxlength="140" placeholder="Shows on his Mac next to the signal">
     </label>
@@ -114,33 +133,67 @@ input:focus { outline: 2px solid var(--ink); outline-offset: 2px; }
   var name = document.getElementById("name"), note = document.getElementById("note"), status = document.getElementById("status");
   try { name.value = localStorage.getItem("signal.name") || ""; } catch (e) {}
   name.addEventListener("change", function () { try { localStorage.setItem("signal.name", name.value); } catch (e) {} });
-  var buttons = Array.prototype.slice.call(document.querySelectorAll(".mood"));
+  var buttons = Array.prototype.slice.call(document.querySelectorAll(".mood[data-mood]"));
+  var setBtn = document.getElementById("setBtn");
+  var all = buttons.concat([setBtn]);
   var words = { nudge: "Sent. Three blue pulses in his room.", urgent: "Sent. Red flashes in his room.", call: "Sent. Purple pulses, he should call." };
-  buttons.forEach(function (b) {
-    b.addEventListener("click", function () {
-      var mood = b.dataset.mood;
-      buttons.forEach(function (x) { x.disabled = true; });
-      status.className = "status"; status.textContent = "Sending";
-      fetch("https://ntfy.sh/", {
-        method: "POST",
-        body: JSON.stringify({
-          topic: topic,
-          title: "Signal from " + (name.value.trim() || "a friend"),
-          message: JSON.stringify({ mood: mood, from: name.value.trim(), note: note.value.trim() }),
-          tags: ["bulb"]
-        })
-      }).then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        status.className = "status ok"; status.textContent = words[mood];
-        b.classList.add("sent"); setTimeout(function () { b.classList.remove("sent"); }, 1500);
-        note.value = "";
-      }).catch(function (e) {
-        status.className = "status err"; status.textContent = "Could not send. Check your connection and try again.";
-      }).finally(function () {
-        setTimeout(function () { buttons.forEach(function (x) { x.disabled = false; }); }, 3000);
-      });
+
+  function send(payload, okText, flash) {
+    all.forEach(function (x) { x.disabled = true; });
+    status.className = "status"; status.textContent = "Sending";
+    payload.from = name.value.trim(); payload.note = note.value.trim();
+    fetch("https://ntfy.sh/", {
+      method: "POST",
+      body: JSON.stringify({ topic: topic, title: "Signal from " + (payload.from || "a friend"), message: JSON.stringify(payload), tags: ["bulb"] })
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      status.className = "status ok"; status.textContent = okText;
+      if (flash) { flash.classList.add("sent"); setTimeout(function () { flash.classList.remove("sent"); }, 1500); }
+      note.value = "";
+    }).catch(function () {
+      status.className = "status err"; status.textContent = "Could not send. Check your connection and try again.";
+    }).finally(function () {
+      setTimeout(function () { all.forEach(function (x) { x.disabled = false; }); }, 3000);
     });
+  }
+  buttons.forEach(function (b) {
+    b.addEventListener("click", function () { send({ mood: b.dataset.mood }, words[b.dataset.mood], b); });
   });
+
+  // Colour picker: drag across the card for hue, same names and hex as his menu bar app.
+  var names = [[10,"Red"],[20,"Vermilion"],[35,"Orange"],[48,"Amber"],[65,"Yellow"],[80,"Lime"],[140,"Green"],[165,"Mint"],[175,"Teal"],[195,"Cyan"],[215,"Sky"],[235,"Azure"],[250,"Blue"],[265,"Indigo"],[285,"Violet"],[300,"Purple"],[320,"Magenta"],[340,"Pink"],[354,"Rose"],[360,"Red"]];
+  function hueName(h) { for (var i = 0; i < names.length; i++) if (h <= names[i][0]) return names[i][1]; return "Red"; }
+  function hex(h) {
+    var c = 1, x = 1 - Math.abs((h / 60) % 2 - 1), r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; } else if (h < 180) { g = c; b = x; }
+    else if (h < 240) { g = x; b = c; } else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+    return "#" + [r, g, b].map(function (v) { return ("0" + Math.round(v * 255).toString(16).toUpperCase()).slice(-2); }).join("");
+  }
+  var pick = document.getElementById("pick"), pickName = document.getElementById("pickName"), pickHex = document.getElementById("pickHex"), setName = document.getElementById("setName");
+  var hue = 240;
+  function paint() {
+    var col = "hsl(" + hue + " 100% 50%)";
+    pick.style.setProperty("--c", col);
+    setBtn.style.setProperty("--pc", "hsl(" + hue + " 100% 72%)");
+    pickName.textContent = hueName(hue); setName.textContent = hueName(hue); pickHex.textContent = hex(hue);
+    pick.setAttribute("aria-valuenow", hue);
+  }
+  function fromEvent(e) {
+    var r = pick.getBoundingClientRect();
+    hue = Math.round(Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) * 359);
+    paint();
+  }
+  var down = false;
+  pick.addEventListener("pointerdown", function (e) { down = true; pick.setPointerCapture(e.pointerId); fromEvent(e); });
+  pick.addEventListener("pointermove", function (e) { if (down) fromEvent(e); });
+  pick.addEventListener("pointerup", function () { down = false; });
+  pick.addEventListener("pointercancel", function () { down = false; });
+  pick.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowLeft" || e.key === "ArrowDown") { hue = (hue + 359) % 360; paint(); e.preventDefault(); }
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") { hue = (hue + 1) % 360; paint(); e.preventDefault(); }
+  });
+  setBtn.addEventListener("click", function () { send({ mood: "colour", hue: hue }, "Sent. His light is going " + hueName(hue).toLowerCase() + ".", pick); });
+  paint();
 })();
 </script>
 </body>
