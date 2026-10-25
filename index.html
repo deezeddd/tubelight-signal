@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Signal Vedant</title>
+<meta name="description" content="Tap a mood and the tubelight in Vedant's room pulses.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;800&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: one left-aligned column, three glow cards stacked, matching the TubeLight menu bar panel. */
+:root {
+  --panel: #1b1c21;
+  --card: #131418;
+  --ink: #f6f1e8;
+  --muted: #9ea0ad;
+  --hairline: rgba(255,255,255,.08);
+  --nudge: #4d5dff;
+  --urgent: #ff5a5a;
+  --call: #b05cff;
+  --ok: #5ccc80;
+  --display: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
+  --body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--panel); color: var(--ink); }
+body {
+  font-family: var(--body); font-size: 16px; line-height: 1.5;
+  padding-block: max(24px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  min-height: 100%;
+}
+main { max-width: 440px; display: grid; gap: 20px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: 40px; line-height: 1; letter-spacing: .01em; text-transform: uppercase; margin: 0; }
+.sub { font-family: var(--display); font-weight: 500; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 8px 0 0; }
+label { display: grid; gap: 6px; font-family: var(--display); font-weight: 500; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+input {
+  font: 500 16px var(--body); color: var(--ink); background: var(--card);
+  border: 1px solid var(--hairline); border-radius: 14px; padding: 12px 14px; width: 100%;
+}
+input:focus { outline: 2px solid var(--ink); outline-offset: 2px; }
+.moods { display: grid; gap: 12px; }
+.mood {
+  position: relative; overflow: hidden; text-align: left; width: 100%;
+  border: 1px solid var(--hairline); border-radius: 20px; background: var(--card); color: var(--ink);
+  padding: 18px 18px 56px; cursor: pointer; font: inherit;
+  transition: transform .12s ease;
+}
+.mood:active { transform: scale(.985); }
+.mood:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.mood::before {
+  content: ""; position: absolute; inset: -24px; pointer-events: none;
+  background:
+    radial-gradient(60% 55% at 50% 118%, rgba(255,255,255,.75), transparent 70%),
+    radial-gradient(90% 80% at 50% 115%, var(--c), transparent 72%),
+    linear-gradient(to bottom, transparent 25%, color-mix(in srgb, var(--c) 35%, transparent) 60%, color-mix(in srgb, var(--c) 90%, transparent));
+  filter: blur(14px); opacity: .55; transition: opacity .25s ease;
+}
+.mood:hover::before, .mood.sent::before { opacity: 1; }
+.mood > * { position: relative; }
+.mood .name { font-family: var(--display); font-weight: 800; font-size: 32px; line-height: 1; text-transform: uppercase; display: block; }
+.mood .chip {
+  display: inline-block; margin-top: 10px; padding: 4px 9px; border-radius: 999px;
+  font: 600 12px var(--body); letter-spacing: .02em;
+  color: color-mix(in srgb, var(--c) 55%, white); background: color-mix(in srgb, var(--c) 20%, transparent);
+}
+.mood[data-mood="nudge"]  { --c: var(--nudge); }
+.mood[data-mood="urgent"] { --c: var(--urgent); }
+.mood[data-mood="call"]   { --c: var(--call); }
+.mood:disabled { opacity: .5; cursor: default; }
+.status { font-family: var(--display); font-weight: 500; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); min-height: 22px; }
+.status.ok { color: var(--ok); }
+.status.err { color: var(--urgent); }
+.foot { font-size: 14px; color: var(--muted); }
+.foot code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .mood, .mood::before { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Signal Vedant</h1>
+    <p class="sub">Tap a mood. The tubelight in his room pulses.</p>
+  </header>
+
+  <section id="missing" hidden>
+    <p class="foot">This link is missing its key. Ask Vedant for the full link; it ends with <code>#tubelight-…</code>.</p>
+  </section>
+
+  <section id="form" hidden>
+    <label>Your name
+      <input id="name" type="text" maxlength="40" autocomplete="name" placeholder="So he knows who it is">
+    </label>
+    <div class="moods" style="margin-top:20px">
+      <button class="mood" data-mood="nudge" type="button"><span class="name">Nudge</span><span class="chip">three slow blue pulses</span></button>
+      <button class="mood" data-mood="urgent" type="button"><span class="name">Urgent</span><span class="chip">six fast red flashes</span></button>
+      <button class="mood" data-mood="call" type="button"><span class="name">Call me</span><span class="chip">four purple pulses</span></button>
+    </div>
+    <label style="margin-top:20px">Note, optional
+      <input id="note" type="text" maxlength="140" placeholder="Shows on his Mac next to the signal">
+    </label>
+    <p class="status" id="status" aria-live="polite"></p>
+    <p class="foot">One signal every ten seconds reaches the light. If the light is off the grid, the signal still shows on his Mac.</p>
+  </section>
+</main>
+<script>
+(function () {
+  var topic = (location.hash || "").replace(/^#/, "");
+  var form = document.getElementById("form"), missing = document.getElementById("missing");
+  if (!/^tubelight-[A-Za-z0-9]{8,}$/.test(topic)) { missing.hidden = false; return; }
+  form.hidden = false;
+  var name = document.getElementById("name"), note = document.getElementById("note"), status = document.getElementById("status");
+  try { name.value = localStorage.getItem("signal.name") || ""; } catch (e) {}
+  name.addEventListener("change", function () { try { localStorage.setItem("signal.name", name.value); } catch (e) {} });
+  var buttons = Array.prototype.slice.call(document.querySelectorAll(".mood"));
+  var words = { nudge: "Sent. Three blue pulses in his room.", urgent: "Sent. Red flashes in his room.", call: "Sent. Purple pulses, he should call." };
+  buttons.forEach(function (b) {
+    b.addEventListener("click", function () {
+      var mood = b.dataset.mood;
+      buttons.forEach(function (x) { x.disabled = true; });
+      status.className = "status"; status.textContent = "Sending";
+      fetch("https://ntfy.sh/", {
+        method: "POST",
+        body: JSON.stringify({
+          topic: topic,
+          title: "Signal from " + (name.value.trim() || "a friend"),
+          message: JSON.stringify({ mood: mood, from: name.value.trim(), note: note.value.trim() }),
+          tags: ["bulb"]
+        })
+      }).then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        status.className = "status ok"; status.textContent = words[mood];
+        b.classList.add("sent"); setTimeout(function () { b.classList.remove("sent"); }, 1500);
+        note.value = "";
+      }).catch(function (e) {
+        status.className = "status err"; status.textContent = "Could not send. Check your connection and try again.";
+      }).finally(function () {
+        setTimeout(function () { buttons.forEach(function (x) { x.disabled = false; }); }, 3000);
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>
